@@ -37,6 +37,26 @@ const AuthModal = ({ onClose }) => {
             setUser(user)
             onClose()
         } catch (err) {
+            // Appwrite throws this when the user is already logged in with an active session.
+            // Instead of showing an error, we recover by fetching the existing session.
+            const isSessionActive =
+                err?.message?.toLowerCase().includes('session is active') ||
+                err?.message?.toLowerCase().includes('creation of a session is prohibited')
+
+            if (isSessionActive) {
+                try {
+                    const { getCurrentUser } = await import('../appwriteAuth')
+                    const existingUser = await getCurrentUser()
+                    if (existingUser) {
+                        setUser(existingUser)
+                        onClose()
+                        return
+                    }
+                } catch {
+                    // If recovery also fails, fall through to show the error
+                }
+            }
+
             setError(err?.message || 'Something went wrong. Please try again.')
         } finally {
             setLoading(false)

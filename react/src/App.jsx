@@ -42,8 +42,13 @@ const App = () => {
     const [paymentMessage, setPaymentMessage] = useState('')
 
     useEffect(() => {
-        // Load tickets from local storage
-        const savedTickets = JSON.parse(localStorage.getItem('my_tickets') || '[]')
+        let savedTickets = []
+        try {
+            savedTickets = JSON.parse(localStorage.getItem('my_tickets') || '[]')
+        } catch (e) {
+            console.error('Error parsing tickets from localStorage', e)
+            localStorage.removeItem('my_tickets')
+        }
         setTickets(savedTickets)
 
         const query = new URLSearchParams(window.location.search)
@@ -87,8 +92,8 @@ const App = () => {
         setIsLoading(true)
         try {
             const endpoint = query
-                ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-                : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`
+                ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}` //Search movie api endpoint
+                : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc` // discover movie api endpoint
 
             const response = await fetch(endpoint, API_OPTIONS)
             if (!response.ok) throw new Error('Failed to fetch movies')

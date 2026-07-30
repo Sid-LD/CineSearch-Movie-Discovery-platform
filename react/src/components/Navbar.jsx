@@ -71,3 +71,5 @@ const Navbar = ({ onAuthClick, onWatchlistClick, watchlistCount, onTicketsClick,
 }
 
 export default Navbar
+
+

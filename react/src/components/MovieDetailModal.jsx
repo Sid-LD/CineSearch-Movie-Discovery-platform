@@ -60,8 +60,21 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
         const fetchAll = async () => {
             const [detailRes, creditsRes, videosRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/movie/${movie.id}`, API_OPTIONS),
+//                 Title
+// Overview
+// Runtime
+// Genres
+// Budget
+// Release Date
                 fetch(`${API_BASE_URL}/movie/${movie.id}/credits`, API_OPTIONS),
+                // Robert Downey Jr.
+// Chris Evans
+// Scarlett Johansson
                 fetch(`${API_BASE_URL}/movie/${movie.id}/videos`, API_OPTIONS),
+//                 Trailer
+// Teaser
+// Behind the Scenes
+// Interview
             ])
             const [detailData, creditsData, videosData] = await Promise.all([
                 detailRes.json(),
@@ -80,7 +93,7 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
 
     // Check watchlist
     useEffect(() => {
-        if (!user) return
+        if (!user) return //u must be logged in before adding to watchlist
         isInWatchlist(user.$id, movie.id).then(setWatchlistDoc).catch(() => {})
     }, [user, movie.id])
 

@@ -23,10 +23,28 @@ export const AuthProvider = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, setUser, logout, loading }}>
+        <AuthContext.Provider value={{ user, setUser, logout, loading }}> //
             {children}
         </AuthContext.Provider>
     )
+     //<AuthContext.Provider>: Think of this as a broadcast tower. It broadcasts whatever is passed to its value prop (in this case, an object containing user, setUser, logout, and loading) to all components inside it.
+// {children}: This is a special React prop. It refers to whatever components are wrapped inside <AuthProvider>.
 }
 
 export const useAuth = () => useContext(AuthContext)
+
+// 2. What is useAuth?
+// Instead of components writing this long line every time:
+
+// javascript
+// import { useContext } from 'react';
+// import { AuthContext } from '../context/AuthContext';
+// const { user } = useContext(AuthContext);
+// You create a custom helper hook:
+
+// javascript
+// export const useAuth = () => useContext(AuthContext);
+// Now, any component in your project can get the auth data with a single clean line:
+
+// javascript
+// const { user, logout, setUser } = useAuth();

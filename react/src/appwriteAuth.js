@@ -12,30 +12,39 @@ const client = new Client()
 const account = new Account(client)
 const database = new Databases(client)
 
-// ─── AUTH ────────────────────────────────────────────────────────────────────
+//Auth
 
 export const createAccount = async (email, password, name) => {
     await account.create(ID.unique(), email, password, name)
     return login(email, password)
 }
 
+// Creates a new user in Appwrite's built-in auth system with a unique ID.
+// Immediately calls login() to create a session, so the user is automatically logged in after signing up.
+
 export const login = async (email, password) => {
     return await account.createEmailPasswordSession(email, password)
 }
 
+
+// Creates a login session.
+// Stores a session cookie in the browser automatically.
+// Returns the session object.
+//u store the login session in the appwrite DB and u send the session cookie to the browser.
+
 export const logout = async () => {
-    return await account.deleteSession('current')
+    return await account.deleteSession('current') //currect means currect active session
 }
 
 export const getCurrentUser = async () => {
     try {
-        return await account.get()
+        return await account.get() // checks whether a valid login session cookie exists or not
     } catch {
         return null
     }
 }
 
-// ─── WATCHLIST ───────────────────────────────────────────────────────────────
+//WatchList
 
 export const addToWatchlist = async (userId, movie) => {
     return await database.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
@@ -70,7 +79,7 @@ export const isInWatchlist = async (userId, movieId) => {
     return result.documents.length > 0 ? result.documents[0] : null
 }
 
-// ─── REVIEWS ─────────────────────────────────────────────────────────────────
+
 
 export const addReview = async (userId, username, movieId, movieTitle, rating, reviewText) => {
     return await database.createDocument(DATABASE_ID, REVIEWS_COLLECTION_ID, ID.unique(), {
