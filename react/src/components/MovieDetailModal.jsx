@@ -192,32 +192,7 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
         }
     }
 
-    const handleBookTickets = async () => {
-        setIsBooking(true)
-        try {
-            let response
-            try {
-                response = await fetch('http://localhost:4242/api/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movie, ticketCount })
-                })
-            } catch (networkErr) {
-                throw new Error('Cannot reach the backend server at localhost:4242. Make sure you ran "npm run dev" in the backend folder.')
-            }
 
-            const session = await response.json()
-            if (session.error) throw new Error(`Stripe error: ${session.error}`)
-            if (!session.url) throw new Error('No checkout URL returned from server.')
-
-            // Redirect directly to Stripe Checkout (modern approach)
-            window.location.href = session.url
-        } catch (e) {
-            console.error('Booking failed:', e)
-            alert(`Booking failed:\n\n${e.message}`)
-            setIsBooking(false)
-        }
-    }
 
     const backdrop = details?.backdrop_path
         ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}`
