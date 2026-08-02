@@ -30,12 +30,12 @@ const TicketsModal = ({ tickets, onClose }) => {
                                 
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#fff' }}>{ticket.movieTitle}</h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                         <span style={{ backgroundColor: '#6366f1', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                            {ticket.ticketCount} Ticket{ticket.ticketCount > 1 ? 's' : ''}
+                                            {ticket.tierBreakdown || `${ticket.ticketCount} Ticket${ticket.ticketCount > 1 ? 's' : ''}`}
                                         </span>
-                                        <span style={{ color: '#a0a0a0', fontSize: '0.85rem' }}>
-                                            Total: ${(parseInt(ticket.ticketCount) * 15).toFixed(2)}
+                                        <span style={{ color: '#a0a0a0', fontSize: '0.85rem', fontWeight: '600' }}>
+                                            Total: ${ticket.totalPrice ? parseFloat(ticket.totalPrice).toFixed(2) : (parseInt(ticket.ticketCount) * 15).toFixed(2)}
                                         </span>
                                     </div>
                                     <p style={{ margin: '10px 0 0 0', fontSize: '0.75rem', color: '#666' }}>

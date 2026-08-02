@@ -52,8 +52,45 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
     const [reviewLoading, setReviewLoading] = useState(false)
     const [reviewError, setReviewError] = useState('')
     const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'cast' | 'reviews'
-    const [ticketCount, setTicketCount] = useState(1)
+    const [tierCounts, setTierCounts] = useState({ vip: 0, standard: 1, economy: 0 })
     const [isBooking, setIsBooking] = useState(false)
+
+    const TIER_CONFIG = {
+        vip:      { label: 'VIP Recliner', price: 25, badge: '👑', desc: 'Luxury recliners with free popcorn & Dolby Atmos' },
+        standard: { label: 'Standard',     price: 15, badge: '🎬', desc: 'Prime central seats with great sightlines' },
+        economy:  { label: 'Economy',      price: 10, badge: '🍿', desc: 'Front & side row seats at the best value' },
+    }
+
+    const updateTierCount = (tierKey, delta) =>
+        setTierCounts((prev) => ({ ...prev, [tierKey]: Math.max(0, prev[tierKey] + delta) }))
+
+    const totalTickets = tierCounts.vip + tierCounts.standard + tierCounts.economy
+    const totalPrice   = tierCounts.vip * 25 + tierCounts.standard * 15 + tierCounts.economy * 10
+
+    const handleBookTickets = async () => {
+        if (totalTickets === 0) return
+        setIsBooking(true)
+        try {
+            let response
+            try {
+                response = await fetch('http://localhost:4242/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movie, tierCounts, totalTickets, totalPrice }),
+                })
+            } catch {
+                throw new Error('Cannot reach backend at localhost:4242. Start it with "npm run dev" in the backend folder.')
+            }
+            const session = await response.json()
+            if (session.error) throw new Error(`Stripe error: ${session.error}`)
+            if (!session.url) throw new Error('No checkout URL returned from server.')
+            window.location.href = session.url
+        } catch (e) {
+            console.error('Booking failed:', e)
+            alert(`Booking failed:\n\n${e.message}`)
+            setIsBooking(false)
+        }
+    }
 
     // Fetch details, credits, videos
     useEffect(() => {
@@ -123,7 +160,7 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
     }
 
     const submitReview = async (e) => {
-        e.preventDefault()
+        e.preventDefault() // prevent page reload
         if (!reviewForm.rating) { setReviewError('Please select a rating.'); return }
         if (!reviewForm.text.trim()) { setReviewError('Review cannot be empty.'); return }
         setReviewLoading(true)
@@ -261,24 +298,50 @@ const MovieDetailModal = ({ movie, onClose, onWatchlistChange }) => {
                             </a>
                         )}
 
-                        {/* Ticket Booking */}
-                        <div className="ticket-booking" style={{ marginTop: '20px', padding: '16px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px' }}>
-                            <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#a0a0a0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎫 Book Tickets</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                    <button style={{ padding: '10px 16px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}>−</button>
-                                    <span style={{ padding: '0 16px', color: 'white', fontWeight: 'bold', fontSize: '1.1rem', minWidth: '40px', textAlign: 'center', lineHeight: '42px' }}>{ticketCount}</span>
-                                    <button style={{ padding: '10px 16px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }} onClick={() => setTicketCount(ticketCount + 1)}>+</button>
-                                </div>
-                                <button
-                                    style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: isBooking ? 'not-allowed' : 'pointer', opacity: isBooking ? 0.7 : 1, transition: 'opacity 0.2s' }}
-                                    onClick={handleBookTickets}
-                                    disabled={isBooking}
-                                >
-                                    {isBooking ? '⏳ Processing...' : `🎟 Book ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} · $${ticketCount * 15}`}
-                                </button>
+                        {/* 3-Tier Ticket Booking */}
+                        <div className="ticket-booking" style={{ marginTop: '20px', padding: '18px', background: 'linear-gradient(135deg, rgba(30,27,75,0.6), rgba(15,23,42,0.8))', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎫 Select Tickets by Tier</h3>
+                                <span style={{ fontSize: '0.8rem', color: '#a5b4fc', fontWeight: 'bold' }}>{totalTickets} Ticket{totalTickets !== 1 ? 's' : ''} Selected</span>
                             </div>
-                            <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#666' }}>Secure payment via Stripe · $15.00 per ticket</p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                                {Object.entries(TIER_CONFIG).map(([key, config]) => (
+                                    <div
+                                        key={key}
+                                        style={{
+                                            display: 'flex', alignItems: 'center',
+                                            padding: '10px 14px',
+                                            backgroundColor: tierCounts[key] > 0 ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                                            border: tierCounts[key] > 0 ? '1px solid rgba(129,140,248,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: '10px', transition: 'all 0.2s ease',
+                                        }}
+                                    >
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '1.1rem' }}>{config.badge}</span>
+                                                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.95rem' }}>{config.label}</span>
+                                                <span style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#60a5fa', padding: '2px 8px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: '600' }}>${config.price}</span>
+                                            </div>
+                                            <p style={{ margin: '3px 0 0 28px', fontSize: '0.72rem', color: '#94a3b8' }}>{config.desc}</p>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+                                            <button type="button" style={{ padding: '6px 12px', background: 'none', border: 'none', color: tierCounts[key] === 0 ? '#555' : 'white', cursor: tierCounts[key] === 0 ? 'default' : 'pointer', fontSize: '1rem' }} onClick={() => updateTierCount(key, -1)} disabled={tierCounts[key] === 0}>−</button>
+                                            <span style={{ padding: '0 10px', color: 'white', fontWeight: 'bold', fontSize: '0.95rem', minWidth: '24px', textAlign: 'center' }}>{tierCounts[key]}</span>
+                                            <button type="button" style={{ padding: '6px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem' }} onClick={() => updateTierCount(key, 1)}>+</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                style={{ width: '100%', padding: '14px', background: totalTickets > 0 ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : '#334155', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '1.05rem', cursor: (totalTickets === 0 || isBooking) ? 'not-allowed' : 'pointer', opacity: (totalTickets === 0 || isBooking) ? 0.6 : 1, boxShadow: totalTickets > 0 ? '0 4px 20px rgba(99,102,241,0.4)' : 'none', transition: 'all 0.2s ease' }}
+                                onClick={handleBookTickets}
+                                disabled={totalTickets === 0 || isBooking}
+                            >
+                                {isBooking ? '⏳ Redirecting to Stripe...' : totalTickets === 0 ? 'Select at least 1 ticket' : `🎟 Book ${totalTickets} Ticket${totalTickets > 1 ? 's' : ''} · $${totalPrice}`}
+                            </button>
+                            <p style={{ margin: '10px 0 0 0', fontSize: '0.75rem', color: '#64748b', textAlign: 'center' }}>Secure payment via Stripe · Tiered pricing</p>
                         </div>
 
                         {/* Tabs */}
