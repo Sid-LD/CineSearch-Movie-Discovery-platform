@@ -41,37 +41,39 @@ const App = () => {
     const [tickets, setTickets] = useState([])
     const [paymentMessage, setPaymentMessage] = useState('')
 
-    useEffect(() => {
-        let savedTickets = []
-        try {
-            savedTickets = JSON.parse(localStorage.getItem('my_tickets') || '[]')
-        } catch (e) {
-            console.error('Error parsing tickets from localStorage', e)
-            localStorage.removeItem('my_tickets')
-        }
-        setTickets(savedTickets)
+    // Helper: get the localStorage key for the current user
+    const ticketKey = (uid) => uid ? `my_tickets_${uid}` : 'my_tickets_guest'
 
+    // Load tickets for the current user and handle Stripe redirect on first mount
+    useEffect(() => {
         const query = new URLSearchParams(window.location.search)
         const sessionId = query.get('session_id')
-        
+
         if (query.get('success') && sessionId) {
             // Fetch session details from backend
             fetch(`http://localhost:4242/api/checkout-session/${sessionId}`)
                 .then(res => res.json())
                 .then(session => {
                     if (session.metadata) {
+                        // Use user-specific key (user may already be set in context)
+                        const uid = user?.$id
+                        const key = ticketKey(uid)
+                        let savedTickets = []
+                        try {
+                            savedTickets = JSON.parse(localStorage.getItem(key) || '[]')
+                        } catch { localStorage.removeItem(key) }
+
                         const newTicket = {
                             ...session.metadata,
                             sessionId: session.id,
                             purchasedAt: new Date().toISOString()
                         }
-                        
-                        // Prevent duplicate adding (if page reloads before URL cleans up)
+
                         const isDuplicate = savedTickets.some(t => t.sessionId === session.id)
                         if (!isDuplicate) {
                             const updatedTickets = [newTicket, ...savedTickets]
                             setTickets(updatedTickets)
-                            localStorage.setItem('my_tickets', JSON.stringify(updatedTickets))
+                            localStorage.setItem(key, JSON.stringify(updatedTickets))
                         }
                     }
                 })
@@ -139,6 +141,16 @@ const App = () => {
     useEffect(() => { fetchMovies(debouncedSearchTerm) }, [debouncedSearchTerm])
     useEffect(() => { loadTrendingMovies() }, [])
     useEffect(() => { loadWatchlist() }, [user])
+
+    // Reload tickets whenever the logged-in user changes (or logs out)
+    useEffect(() => {
+        const key = ticketKey(user?.$id)
+        let saved = []
+        try {
+            saved = JSON.parse(localStorage.getItem(key) || '[]')
+        } catch { localStorage.removeItem(key) }
+        setTickets(saved)
+    }, [user])
 
     const handleWatchlistChange = (delta) => {
         // Refresh full watchlist after change
